@@ -1,0 +1,5 @@
+path_to_cacm = "data/CACM/"
+path_cacm_all = path_to_cacm + "cacm.all"
+path_cacm_common_words = path_to_cacm + "common_words"
+path_cacm_qrels = path_to_cacm + "qrels.text"
+path_cacm_query = path_to_cacm + "query.text"
