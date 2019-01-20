@@ -1,46 +1,53 @@
+from data_creation import get_cacm_data_as_dict,preprocessing_and_vocabulary_creation
 from global_variables import path_cacm_all
-import re
+import numpy as np
+def get_nb_of_tokens(preprocessed_collection:dict, *text_keys)-> int :
+    nb_tokens = 0
+    for doc_id in preprocessed_collection :
+        for key in text_keys :
+            try :
+                nb_tokens += len(preprocessed_collection[doc_id][key])
+            except KeyError :
+                continue
 
-def get_cacm_data_as_dict(file_name: str) -> dict:
-    with open(file_name,"r") as f :
-        i = 0
-        documents = {}
-        header = ""
-        doc_id = None
-        meaning = {"W":"abstract","T":"title","K":"key_words"}
-        while(True):
-            try:
-                line = next(f)
-                if len(line) >= 2 :
-                    match = re.match(".[ITWBXNKAC]",line[:2])
-                    if match is None and doc_id is not None:
-                        if header == None or header == "I" :
-                            continue
-                        documents[doc_id][meaning[header]] = documents[doc_id].get(meaning[header],"") + line
-                    else :
-                        if not re.match(".[ITWK]",match.group(0)):
-                            header = None
-                        elif match.group(0) == ".I" :
-                            doc_id = line[3:]
-                            documents[doc_id] = {}
-                            header = "I"
-                        else :
-                            header =  match.group(0)[1]
-                elif doc_id is not None:
-                    if header == None or header == "I" :
-                        continue
-                    documents[doc_id][meaning[header]] = documents[doc_id].get(meaning[header],"") + line
+    return nb_tokens
 
-            except StopIteration :
-                break
-    return documents
+def get_vocab_size(collection_vocabulary_key:dict, *text_keys:str) -> (set,int):
+    all_vocab = set()
+    for key in text_keys :
+        all_vocab = all_vocab.union(collection_vocabulary_key[key])
+    return all_vocab, len(all_vocab)
 
-def preprocess_title(title:str):
-    # A LOT OF WORK TO DO HERE
-    return(re.sub("\n"," ",title))
+def get_nbtoknes_vocab_size_halfcollection(preprocessed_collection:dict, *text_keys) -> (int,int) :
+    n = len(preprocessed_collection)
+    i = 0
+    nb_tokens = 0
+    vocab = set()
+    for doc_id in preprocessed_collection :
+        for key in text_keys :
+            try :
+                nb_tokens += len(preprocessed_collection[doc_id][key])
+                vocab = vocab.union(set(preprocessed_collection[doc_id][key]))
+            except KeyError:
+                continue
+        i += 1
+        if i >= n/2 :
+            break
+    vocab_size = len(vocab)
+    return vocab_size,nb_tokens
 
-
+def get_heap_params(all_vocab_size, all_nbtokens,half_vocab_size, half_nbtokens):
+    b =(np.log(all_vocab_size) - np.log(half_vocab_size)) /(np.log(all_nbtokens) - np.log(half_nbtokens))
+    k = np.exp(np.log(all_vocab_size) - b*np.log(all_nbtokens))
+    return b,k
 
 if __name__ == "__main__" :
-    doc = get_data(path_cacm_all)
-    print(len(doc))
+    cacm_dict = get_cacm_data_as_dict(path_cacm_all)
+    preprocessed_collection, collection_vocabulary_key, vocab_by_doc_key = preprocessing_and_vocabulary_creation(cacm_dict, "abstract", "title","key_words")
+    all_vocab_size = get_vocab_size(collection_vocabulary_key,"title","abstract","key_words")[1]
+    all_nbtokens =  get_nb_of_tokens(preprocessed_collection,"title","abstract","key_words")
+    print("vocabulary size : " ,all_vocab_size)
+    print("number of tokens : " , all_nbtokens)
+    half_vocab_size, half_nbtokens =  get_nbtoknes_vocab_size_halfcollection(preprocessed_collection,"title","abstract","key_words")
+    b,k = get_heap_params(all_vocab_size, all_nbtokens,half_vocab_size, half_nbtokens)
+    print("b = {b}, k = {k}".format(b=b,k=k))
