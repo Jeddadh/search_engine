@@ -105,7 +105,6 @@ class ORNode(Node):
         posting_result = []
         while docID1_pointer < n1 :
             while docID2_pointer < n2 and posting2[docID2_pointer][doc_id_index] <= posting1[docID1_pointer][doc_id_index] :
-                print(docID1_pointer,docID2_pointer)
                 posting_result.append(posting2[docID2_pointer][doc_id_index])
                 docID2_pointer += 1
             if posting1[docID1_pointer][doc_id_index] not in posting_result :

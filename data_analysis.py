@@ -39,6 +39,7 @@ def get_nbtoknes_vocab_size_halfcollection(preprocessed_collection:dict, *text_k
     vocab_size = len(vocab)
     return vocab_size, nb_tokens
 
+
 def get_heap_params(all_vocab_size, all_nbtokens,half_vocab_size, half_nbtokens):
     b =(np.log(all_vocab_size) - np.log(half_vocab_size)) /(np.log(all_nbtokens) - np.log(half_nbtokens))
     k = np.exp(np.log(all_vocab_size) - b*np.log(all_nbtokens))
