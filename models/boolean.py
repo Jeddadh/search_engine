@@ -1,20 +1,120 @@
-# from indexation.inversed_index import *
+from indexation.saver import get_term_termid,get_termid_posting
+from global_variables import term_termid_file_name, termid_postings_file_name
+
+class Node():
+    def __init__(self, left_index, right_index, query, model):
+        self.left_index = left_index
+        self.right_index = right_index
+        self.children = []
+        self.parent = None
+        self.operation = None
+        self.query = query
+        self.right_word = None
+        self.left_word = None
+        self.model = model
+
+    def add_child(self, child):
+        child.set_parent(self)
+        self.children.append(child)
+
+    def set_parent(self,parent):
+        self.parent = parent
+
+    def has_parent(self):
+        if self.parent == None :
+            return False
+        return True
+
+    def is_child_of_couple_index(self, couple_index):
+        if self.has_parent():
+            return False
+        if self.left_index <= couple_index[0] :
+            return False
+        if self.right_index >= couple_index[1]:
+            return False
+        return True
+
+    def is_leaf(self):
+        return not self.children
+
+    def get_operation(self):
+        if self.is_leaf() :
+            try :
+                op = self.query[self.left_index+1:self.right_index].split(" ")[1]
+            except IndexError :
+                pass
+            self.left_word = self.query[self.left_index+1:self.right_index].split(" ")[0]
+            try :
+                self.right_word = self.query[self.left_index+1:self.right_index].split(" ")[2]
+            except :
+                pass
+            return op
+
+        if len(self.children) == 1 :
+            op = self.query[self.left_index+1:self.right_index].split(" ")[1]
+            self.left_word = self.query[self.left_index+1:self.right_index].split(" ")[0]
+            return op
+
+        left_child = self.children[0]
+        right_child = self.children[1]
+        op = self.query[left_child.right_index+1:right_child.left_index].strip().split(" ")[0]
+        return op
+
+    def and_operation(self, liste1, liste2):
+        return set(liste1).intersection(set(liste2))
+
+    def or_operation(self, liste1, liste2):
+        return set(liste1).union(set(liste2))
+
+    def not_operation(self, liste, all_list):
+        return set(all_list).difference(set(liste))
+
+    def get_result(self):
+        op = self.get_operation()
+        if self.is_leaf():
+            liste1 = self.model.query_on_word(self.left_word)
+            if self.right_word is None :
+                return set(liste1)
+            liste2 = self.model.query_on_word(self.right_word)
+        elif len(self.children) == 1 :
+            liste1 = self.model.query_on_word(self.left_word)
+            liste2 = self.children[0].get_result()
+        else :
+            liste1 = self.children[0].get_result()
+            liste2 = self.children[1].get_result()
+
+        if op == BooleanModel.AND_operator :
+            return self.and_operation(liste1, liste2)
+        elif op == BooleanModel.OR_operator :
+            return self.or_operation(liste1, liste2)
+        elif op == BooleanModel.NOT_operator :
+            raise NotIm()
+
 
 class BooleanModel():
+    AND_operator = "&&"
+    OR_operator = "||"
+    NOT_operator = "!!"
     doc_id_index = 0
-    def __init__(self,):
-        pass
+    def __init__(self, path_to_index, collection_name):
+        self.term_termid = get_term_termid(path_to_index+"/"+collection_name+"/"+term_termid_file_name)
+        self.collection_name = collection_name
+        if collection_name == "cacm":
+            self.termid_postings = get_termid_posting(path_to_index+"/"+collection_name+"/"+termid_postings_file_name)
 
-    def request(query:str,data_collection_name :str = "") -> list :
+    def request(self, query:str,data_collection_name :str = "") -> list :
         """
         takes a logic request in the form of (word1 && word2) || (word1 && Word2) && ( !!(wordx) )  ...
         It may be as complex as you want
 
         returns a list of documents ID
         """
-        pass
+        tree = self.get_tree_from_query(query)
+        return tree.get_result()
 
-    def get_tree_from_query(query: str, open_parenthese : str = "(",close_parenthese : str = ")"):
+
+    # @staticmethod
+    def get_tree_from_query(self, query: str, open_parenthese : str = "(",close_parenthese : str = ")"):
         nb_open_parentheses = 0
         open_parenthese_indices = []
         nb_close_parentheses = 0
@@ -32,116 +132,47 @@ class BooleanModel():
             while i < len(open_parenthese_indices) and open_parenthese_indices[i] < cp :
                 i += 1
             i -= 1
-            couple_liste.append((open_parenthese_indices.pop(i),cp))
+            try :
+                open_index = open_parenthese_indices.pop(i)
+            except IndexError :
+                raise BooleanQueryFormException()
+            close_index = cp
+            if cp <= open_index :
+                raise BooleanQueryFormException()
+            couple_liste.append((open_index,close_index))
+        liste_of_nodes = []
+        for couple_index,couple in enumerate(couple_liste) :
+            new_node = Node(*couple,query,self)
+            liste_of_nodes.append(new_node)
+            for node in liste_of_nodes[:len(liste_of_nodes)]:
+                if node.is_child_of_couple_index(couple):
+                    print(node.left_index)
+                    new_node.add_child(node)
+        has_root1 = True
+        has_root2 = True
+        root = Node(-1,len(query),query,self)
+        for node in liste_of_nodes :
+            if not node.has_parent():
+                if not has_root1 :
+                    has_root2 = False
+                has_root1 = False
+        if has_root2:
+            for node in liste_of_nodes:
+                if node.left_index  == 0:
+                    return node
+        return root
 
-        return couple_liste
+    # def get_liste_of_words_postings(self, collection: str, list_of_words: list):
+    #     if collection == "cacm" :
+    #         pass
 
-class Node():
-    def __init__(self, right_child = None, left_child = None, is_leaf = False, posting = None):
-        self.right_child = right_child
-        self.left_child = left_child
-        self.is_leaf = is_leaf
-        if self.is_leaf :
-            if posting == None :
-                raise ValueError(" if is leaf, posting must be a list")
-
-    def set_right_child(self,right_child):
-        self.right_child = right_child
-
-    def set_left_child(self,left_child):
-        self.left_child = left_child
-
-    def get_result(self):
-        pass
-
-class ANDNode(Node):
-    def __init__(self, right_child = None, left_child = None, is_leaf = False):
-        Node.__init__(self, right_child = right_child, left_child = left_child, is_leaf = is_leaf)
-
-
-    def get_result(self):
-        if self.is_leaf :
-            return self.posting
-        return ANDNode.perform_AND_operation(self.right_child.get_result(),self.left_child.get_result(),BooleanModel.doc_id_index)
-
-    @staticmethod
-    def perform_AND_operation( posting1:list, posting2: list, doc_id_index: int  = 0 )  -> list :
-        """
-        posting = [(docID,frequency_word_doc,[position1, postions2, ...., postion_freq]), ...]
-        doc_id_index (optional) int : the position of the "doc_id" in the tuple, by default 0 as above
-        """
-        n1 = len(posting1)
-        n2 = len(posting2)
-        docID1_pointer = 0
-        docID2_pointer = 0
-        posting_result = []
-        while docID1_pointer < n1 :
-            while docID2_pointer < n2 and posting2[docID2_pointer][doc_id_index] <= posting1[docID1_pointer][doc_id_index] :
-                if posting1[docID1_pointer][doc_id_index] ==  posting2[docID2_pointer][doc_id_index] :
-                    posting_result.append(posting1[docID1_pointer][doc_id_index])
-                docID2_pointer += 1
-            docID1_pointer += 1
-        return posting_result
-
-class ORNode(Node):
-    def __init__(self, right_child = None, left_child = None, is_leaf = False):
-        Node.__init__(self, right_child = right_child, left_child = left_child, is_leaf = is_leaf)
-
-    def get_result(self):
-        if self.is_leaf :
-            return self.posting
-        return ORNode.perform_OR_operation(self.right_child.get_result(),self.left_child.get_result(),BooleanModel.doc_id_index)
-
-    @staticmethod
-    def perform_OR_operation(posting1:list, posting2: list, doc_id_index: int  = 0 )  -> list :
-        """
-        posting = [(docID,frequency_word_doc,[position1, postions2, ...., postion_freq]), ...]
-        doc_id_index (optional) int : the position of the "doc_id" in the tuple, by default 0 as above
-        """
-        n1 = len(posting1)
-        n2 = len(posting2)
-        docID1_pointer = 0
-        docID2_pointer = 0
-        posting_result = []
-        while docID1_pointer < n1 :
-            while docID2_pointer < n2 and posting2[docID2_pointer][doc_id_index] <= posting1[docID1_pointer][doc_id_index] :
-                posting_result.append(posting2[docID2_pointer][doc_id_index])
-                docID2_pointer += 1
-            if posting1[docID1_pointer][doc_id_index] not in posting_result :
-                posting_result.append(posting1[docID1_pointer][doc_id_index])
-            docID1_pointer += 1
-        while docID2_pointer < n2 :
-            posting_result.append(posting2[docID2_pointer][doc_id_index])
-            docID2_pointer += 1
-        return posting_result
-
-
-class NOTNode(Node):
-    """must have only one child"""
-    def __init__(self, right_child = None, left_child = None, is_leaf = False):
-        Node.__init__(self, right_child = right_child, left_child = left_child, is_leaf = is_leaf)
-
-    def get_result():
-        if self.is_leaf :
-            return self.posting
-        else :
-            pass
-
-
-class BinaryTreeDecision():
-    def __init__(self):
-        self.root = None
-
-    def verify_request():
-        pass
-
-    def get_result():
-        return self.root.get_result()
+    def query_on_word(self,word):
+        if self.collection_name == "cacm":
+            term_id = self.term_termid.get(word,None)
+            docs = self.termid_postings.get(term_id,[])
+            return docs
 
 
 if __name__ == "__main__" :
-    posting1 = [(1,),(3,),(7,),(8,),(10,),(15,)]
-    posting2 = [(1,),(4,),(7,),(9,),(10,),(11,),(15,),(16,),(18,),(20,)]
-    # print(BooleanModel.perform_OR_operation(posting1,posting2))
-    query = "((((((s))))))"
-    print(BooleanModel.get_tree_from_query(query))
+    query = "a && (b || (c && d))"
+    tree  = BooleanModel.get_tree_from_query(query)

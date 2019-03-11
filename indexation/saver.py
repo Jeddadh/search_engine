@@ -1,16 +1,17 @@
-def save_new_term_termid(term_termid,collection_name, file_name,sep = " ",end_car = "\n"):
-    f = open(file_name,"w")
-    for term in term_termid :
-        f.write(str(term)+sep+str(term_termid[term]+end_car))
-    f.close()
+import os
 
-def save_new_termid_posting(termid_postings, collection_name, file_name,sep =" ", end_car ="\n"):
-    f = open(file_name,"w")
+def save_new_term_termid(term_termid,collection_name, file_path,file_name ="term_termid.txt",sep = " ",end_car = "\n"):
+    f = open(file_path+"/"+file_name,"w")
+    for term in term_termid :
+        f.write(str(term)+sep+str(term_termid[term])+end_car)
+    f.close()
+def save_new_termid_posting(termid_postings, collection_name, file_path, file_name="termid_postings.txt",sep =" ", end_car ="\n"):
+    f = open(file_path+"/"+file_name,"w")
     for termid in termid_postings :
-        f.write(termid)
+        f.write(str(termid))
         for doc_id in termid_postings[termid]:
             f.write(sep)
-            f.write(doc_id)
+            f.write(str(doc_id))
         f.write(end_car)
     f.close()
 
@@ -23,18 +24,18 @@ def get_term_termid(file_name):
         for line in f :
             liste = line[:-1].split(' ')
             term = liste[0]
-            termid = liste[1]
-            termid_postings[termid] = posting
-    return termid_postings
+            termid = int(liste[1])
+            term_termid[term] = termid
+    return term_termid
 
 def get_termid_posting(file_name):
     termid_postings = {}
     with open(file_name,"r") as f :
         for line in f :
             liste = line[:-1].split(' ')
-            termid = liste[0]
+            termid = int(liste[0])
             posting = liste[1:]
-            termid_postings[termid] = posting
+            termid_postings[termid] = [int(pos) for pos in posting]
     return termid_postings
 
 

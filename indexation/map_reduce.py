@@ -100,7 +100,7 @@ def get_file_path(file_name):
 def get_level_from_file_name(file_name):
     file_name = file_name.split("/")[-1]
     i = file_name.index("_")
-    return int(file_name[:i]),file_name[i:]
+    return int(file_name[:i]),file_name[i+1:]
 
 def aggregate_list_of_termid_postings(list_of_file_paths, result_path, max_memory_size):
     sorted_list_of_file_paths = sorted(list_of_file_paths)
@@ -108,11 +108,13 @@ def aggregate_list_of_termid_postings(list_of_file_paths, result_path, max_memor
                                                         key = lambda file_name : get_level_from_file_name(file_name)[1])
     aggregating_level =  get_level_from_file_name(list_of_file_paths[-1])[0] + 1
     liste_of_useful_files = []
+    liste_of_temp_files = set(list_of_file_paths)
     i = 0
     while i < (len(sorted_list_of_file_paths_by_begginings_letters)-1):
-        # print(sorted_list_of_file_paths_by_begginings_letters)
         f1 = sorted_list_of_file_paths_by_begginings_letters[i]
         f2 = sorted_list_of_file_paths_by_begginings_letters[i+1]
+        liste_of_temp_files.add(f1)
+        liste_of_temp_files.add(f2)
         if  get_level_from_file_name(f1)[0] == get_level_from_file_name(f2)[0] :
             liste_of_useful_files.append(f1)
             i += 1
@@ -120,21 +122,19 @@ def aggregate_list_of_termid_postings(list_of_file_paths, result_path, max_memor
         else :
             new_files = aggregate_2_termid_postings(f1, f2, result_path, max_memory_size,aggregating_level)
             aggregating_level += 1
-            # print("-------------------")
-            # print(sorted_list_of_file_paths_by_begginings_letters[i:i+2], end = " ")
-            # print(new_files)
             sorted_list_of_file_paths_by_begginings_letters[i:i+2] = new_files
             sorted_list_of_file_paths_by_begginings_letters = sorted(sorted_list_of_file_paths_by_begginings_letters, \
                                                                 key = lambda file_name : get_level_from_file_name(file_name)[1])
-            # print(sorted_list_of_file_paths_by_begginings_letters)
+
     liste_of_useful_files.append(sorted_list_of_file_paths_by_begginings_letters[-1])
+    liste_of_temp_files = liste_of_temp_files.difference(liste_of_useful_files)
+    for ff in liste_of_temp_files :
+        os.remove(ff)
+    for usefull_file in liste_of_useful_files :
+        new_name = result_path+"/"+str(get_level_from_file_name(usefull_file)[1])
+        print(new_name)
+        os.rename(usefull_file,new_name)
     return liste_of_useful_files
-
-
-
-
-
-
 
 if __name__ == "__main__" :
     liste1 = {"1":["0","1","2","4","5","6"], "2" :["0","1","4","5","6","7","8","9"],"3":["1","2","3","4","8","9","10","12","45"]}
@@ -154,7 +154,6 @@ if __name__ == "__main__" :
     save_new_termid_posting(liste2, "col1", file2_path)
     save_new_termid_posting(liste3, "col1", file3_path)
     save_new_termid_posting(liste4, "col1", file4_path)
-    # aggregate_2_termid_postings(file1_path, file2_path, result_path, 0, 5)
     list_of_file_paths = [file1_path,file2_path, file3_path, file4_path]
-    a = aggregate_list_of_termid_postings(list_of_file_paths, result_path, 10000000000)
+    a = aggregate_list_of_termid_postings(list_of_file_paths, result_path, 0)
     print(a)

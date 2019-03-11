@@ -90,7 +90,7 @@ if __name__ == "__main__" :
     b,k = get_heap_params(all_vocab_size, all_nbtokens,half_vocab_size, half_nbtokens)
     print("b = {b}, k = {k}".format(b=b,k=k))
     frequency_dic = get_word_frequency_and_rank(preprocessed_collection,"title","abstract","key_words")
-    print(frequency_dic)
+    # print(frequency_dic)
     plot_freq_vs_rank(frequency_dic)
     plot_freq_vs_rank_log(frequency_dic)
     plt.show()
