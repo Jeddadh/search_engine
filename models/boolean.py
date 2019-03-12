@@ -49,12 +49,10 @@ class Node():
             except :
                 pass
             return op
-
         if len(self.children) == 1 :
             op = self.query[self.left_index+1:self.right_index].split(" ")[1]
             self.left_word = self.query[self.left_index+1:self.right_index].split(" ")[0]
             return op
-
         left_child = self.children[0]
         right_child = self.children[1]
         op = self.query[left_child.right_index+1:right_child.left_index].strip().split(" ")[0]
@@ -82,7 +80,6 @@ class Node():
         else :
             liste1 = self.children[0].get_result()
             liste2 = self.children[1].get_result()
-
         if op == BooleanModel.AND_operator :
             return self.and_operation(liste1, liste2)
         elif op == BooleanModel.OR_operator :
@@ -95,7 +92,6 @@ class BooleanModel():
     AND_operator = "&&"
     OR_operator = "||"
     NOT_operator = "!!"
-    doc_id_index = 0
     def __init__(self, path_to_index, collection_name):
         self.term_termid = get_term_termid(path_to_index+"/"+collection_name+"/"+term_termid_file_name)
         self.collection_name = collection_name
@@ -111,7 +107,6 @@ class BooleanModel():
         """
         tree = self.get_tree_from_query(query)
         return tree.get_result()
-
 
     # @staticmethod
     def get_tree_from_query(self, query: str, open_parenthese : str = "(",close_parenthese : str = ")"):
@@ -162,16 +157,11 @@ class BooleanModel():
                     return node
         return root
 
-    # def get_liste_of_words_postings(self, collection: str, list_of_words: list):
-    #     if collection == "cacm" :
-    #         pass
-
     def query_on_word(self,word):
         if self.collection_name == "cacm":
             term_id = self.term_termid.get(word,None)
             docs = self.termid_postings.get(term_id,[])
             return docs
-
 
 if __name__ == "__main__" :
     query = "a && (b || (c && d))"
