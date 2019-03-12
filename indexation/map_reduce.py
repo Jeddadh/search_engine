@@ -150,10 +150,10 @@ if __name__ == "__main__" :
     file2_path = "2_1.txt"
     file3_path = "3_1.txt"
     file4_path = "4_1.txt"
-    save_new_termid_posting(liste1, "col1", file1_path)
-    save_new_termid_posting(liste2, "col1", file2_path)
-    save_new_termid_posting(liste3, "col1", file3_path)
-    save_new_termid_posting(liste4, "col1", file4_path)
-    list_of_file_paths = [file1_path,file2_path, file3_path, file4_path]
+    save_new_termid_posting(liste1, "col1", result_path, file1_path)
+    save_new_termid_posting(liste2, "col1", result_path, file2_path)
+    save_new_termid_posting(liste3, "col1", result_path, file3_path)
+    save_new_termid_posting(liste4, "col1", result_path, file4_path)
+    list_of_file_paths = [result_path+'/'+file1_path,result_path+'/'+file2_path, result_path+'/'+file3_path, result_path+'/'+file4_path]
     a = aggregate_list_of_termid_postings(list_of_file_paths, result_path, 0)
     print(a)
